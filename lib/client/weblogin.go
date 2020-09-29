@@ -32,6 +32,7 @@ import (
 	"github.com/gravitational/teleport"
 	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/defaults"
+	"github.com/gravitational/teleport/lib/services"
 
 	"github.com/gravitational/roundtrip"
 	"github.com/gravitational/trace"
@@ -57,10 +58,13 @@ type SSOLoginConsoleReq struct {
 	// RouteToCluster is an optional cluster name to route the response
 	// credentials to.
 	RouteToCluster string
+	// KubernetesCluster is an optional k8s cluster name to route the response
+	// credentials to.
+	KubernetesCluster string
 }
 
-// Check makes sure that the request is valid
-func (r SSOLoginConsoleReq) Check() error {
+// CheckAndSetDefaults makes sure that the request is valid
+func (r *SSOLoginConsoleReq) CheckAndSetDefaults(pg services.ProxyGetter) error {
 	if r.RedirectURL == "" {
 		return trace.BadParameter("missing RedirectURL")
 	}
@@ -70,6 +74,11 @@ func (r SSOLoginConsoleReq) Check() error {
 	if r.ConnectorID == "" {
 		return trace.BadParameter("missing ConnectorID")
 	}
+	kc, err := auth.CheckKubeCluster(r.KubernetesCluster, pg)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	r.KubernetesCluster = kc
 	return nil
 }
 
@@ -107,6 +116,9 @@ type CreateSSHCertReq struct {
 	// RouteToCluster is an optional cluster name to route the response
 	// credentials to.
 	RouteToCluster string
+	// KubernetesCluster is an optional k8s cluster name to route the response
+	// credentials to.
+	KubernetesCluster string
 }
 
 // CreateSSHCertWithU2FReq are passed by web client
@@ -128,6 +140,9 @@ type CreateSSHCertWithU2FReq struct {
 	// RouteToCluster is an optional cluster name to route the response
 	// credentials to.
 	RouteToCluster string
+	// KubernetesCluster is an optional k8s cluster name to route the response
+	// credentials to.
+	KubernetesCluster string
 }
 
 // PingResponse contains data about the Teleport server like supported
@@ -160,6 +175,9 @@ type SSHLogin struct {
 	// RouteToCluster is an optional cluster name to route the response
 	// credentials to.
 	RouteToCluster string
+	// KubernetesCluster is an optional k8s cluster name to route the response
+	// credentials to.
+	KubernetesCluster string
 }
 
 // SSHLoginSSO contains SSH login parameters for SSO login.
@@ -454,13 +472,14 @@ func SSHAgentLogin(ctx context.Context, login SSHLoginDirect) (*auth.SSHLoginRes
 	}
 
 	re, err := clt.PostJSON(ctx, clt.Endpoint("webapi", "ssh", "certs"), CreateSSHCertReq{
-		User:           login.User,
-		Password:       login.Password,
-		OTPToken:       login.OTPToken,
-		PubKey:         login.PubKey,
-		TTL:            login.TTL,
-		Compatibility:  login.Compatibility,
-		RouteToCluster: login.RouteToCluster,
+		User:              login.User,
+		Password:          login.Password,
+		OTPToken:          login.OTPToken,
+		PubKey:            login.PubKey,
+		TTL:               login.TTL,
+		Compatibility:     login.Compatibility,
+		RouteToCluster:    login.RouteToCluster,
+		KubernetesCluster: login.KubernetesCluster,
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -559,12 +578,13 @@ func SSHAgentU2FLogin(ctx context.Context, login SSHLoginU2F) (*auth.SSHLoginRes
 	}
 
 	re, err := clt.PostJSON(ctx, clt.Endpoint("webapi", "u2f", "certs"), CreateSSHCertWithU2FReq{
-		User:            login.User,
-		U2FSignResponse: *u2fSignResponse,
-		PubKey:          login.PubKey,
-		TTL:             login.TTL,
-		Compatibility:   login.Compatibility,
-		RouteToCluster:  login.RouteToCluster,
+		User:              login.User,
+		U2FSignResponse:   *u2fSignResponse,
+		PubKey:            login.PubKey,
+		TTL:               login.TTL,
+		Compatibility:     login.Compatibility,
+		RouteToCluster:    login.RouteToCluster,
+		KubernetesCluster: login.KubernetesCluster,
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
