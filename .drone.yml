@@ -112,6 +112,19 @@ steps:
       - cd /go/src/github.com/gravitational/teleport
       - make -C build.assets test
 
+  - name: Run chaos tests
+    image: docker
+    environment:
+      GOPATH: /go
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make
+      - chown -R $UID:$GID /go
+      - cd /go/src/github.com/gravitational/teleport
+      - make -C build.assets chaos
+
   - name: Run integration tests
     image: docker
     environment:

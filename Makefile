@@ -267,6 +267,15 @@ integration:
 	go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" ./integration/... $(FLAGS)
 
 #
+# Chaos tests. Run without race detector and have TestChaos prefix.
+#
+.PHONY: chaos
+chaos: FLAGS ?= -v -cover
+chaos: FOLDERS := $(shell find . -type f -name '*chaos*' | xargs dirname | uniq)
+chaos:
+	go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" -test.run=TestChaos $(FOLDERS) $(FLAGS)
+
+#
 # Lint the Go code.
 # By default lint scans the entire repo. Pass FLAGS='--new' to only scan local
 # changes (or last commit).

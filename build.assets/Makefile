@@ -157,6 +157,14 @@ integration: buildbox
 		/bin/bash -c "make -C $(SRCDIR) FLAGS='-cover' integration"
 
 #
+# Runs chaos tests inside a build container
+#
+.PHONY:chaos
+chaos: buildbox
+	docker run $(DOCKERFLAGS) $(BCCFLAGS) $(NOROOT) -t $(BUILDBOX) \
+		/bin/bash -c "make -C $(SRCDIR) FLAGS='-cover' chaos"
+
+#
 # Runs linters on new changes inside a build container.
 #
 .PHONY:lint
